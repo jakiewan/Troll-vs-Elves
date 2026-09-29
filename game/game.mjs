@@ -26,6 +26,7 @@ export const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 export const info = b => LEVELS[b.type][b.level];
 const footprint = type => ({ house: 30, tower: 23, grove: 29, wall: 32 })[type];
 const buildTime = type => ({ house: 4, wall: 5, tower: 6, grove: 6 })[type];
+const UPGRADE_TIME = 2.5;
 const width = Math.ceil(MAP.w / MAP.cell), height = Math.ceil(MAP.h / MAP.cell);
 const cellAt = p => Math.floor(p.y / MAP.cell) * width + Math.floor(p.x / MAP.cell);
 const centerOf = id => ({ x: id % width * MAP.cell + 8, y: Math.floor(id / width) * MAP.cell + 8 });
@@ -164,22 +165,25 @@ export function build(game, type, x, y) {
   fx(game, 'command', b.x, b.y); notify(game, '精灵正在前往施工位置');
   return '';
 }
+// 只有墙需要精灵动手；未建完的建筑仍然要精灵继续施工。
 export function repair(game, b) {
   if (!b || b.hp <= 0) return '请先选中自己的建筑';
   if (b.progress < 1) return assignWork(game, b, 'build');
-  if (b.upgrade) return assignWork(game, b, 'upgrade');
-  if (b.hp >= info(b).hp - .01) return '建筑已经完好';
+  if (b.upgrade) return '正在升级，完成后再修理';
+  if (b.type !== 'wall') return '墙体之外的建筑不必手工修理';
+  if (b.hp >= info(b).hp - .01) return '墙体完好，无需修理';
   if (game.gold < 1) return '修理需要金币：每秒 1 金';
   return assignWork(game, b, 'repair');
 }
+// 升级是建筑自身的行为：点一下就开工，精灵不必到场。
 export function upgrade(game, b) {
   if (!b || b.hp <= 0 || b.progress < 1) return '建筑建成后才能升级';
-  if (b.upgrade) return assignWork(game, b, 'upgrade');
+  if (b.upgrade) return '正在升级中';
   const next = LEVELS[b.type][b.level + 1];
   if (!next) return '已达到本场景最高等级';
   if (game.gold < next.gold || game.wood < next.wood) return '升级资源不足';
-  const error = assignWork(game, b, 'upgrade'); if (error) return error;
   game.gold -= next.gold; game.wood -= next.wood; b.upgrade = { progress: 0 };
+  fx(game, 'spark', b.x, b.y - 25); notify(game, '开始升级：' + next.name);
   return '';
 }
 export function stopPlayer(game) { game.player.path = []; game.player.goal = null; game.player.order = null; game.player.action = 'idle'; }
@@ -211,16 +215,12 @@ function workTick(game, dt) {
     const delta = Math.min(dt / buildTime(b.type), 1 - b.progress);
     b.progress += delta; b.hp = Math.min(info(b).hp, b.hp + info(b).hp * .85 * delta);
     if (b.progress >= 1 - 1e-7) { b.progress = 1; stopPlayer(game); fx(game, 'complete', b.x, b.y, { life: 1 }); notify(game, info(b).name + '建造完成'); }
-  } else if (order.kind === 'upgrade') {
-    b.upgrade.progress += dt / 5;
-    if (b.upgrade.progress >= 1) {
-      const oldMax = info(b).hp; b.level++; b.hp += info(b).hp - oldMax; b.upgrade = null; stopPlayer(game);
-      fx(game, 'complete', b.x, b.y, { life: 1 }); notify(game, '升级完成：' + info(b).name);
-    }
   } else {
-    const fraction = Math.min(dt, game.gold, (info(b).hp - b.hp) / 28);
-    game.gold = Math.max(0, game.gold - fraction); b.hp = Math.min(info(b).hp, b.hp + fraction * 28);
-    if (b.hp >= info(b).hp - .01 || game.gold < .001) { stopPlayer(game); notify(game, b.hp >= info(b).hp - .01 ? '修理完成' : '金币不足，修理暂停'); }
+    // 修理速度 28 生命/秒，每点生命消耗 info(b).repair 金币。
+    const cost = info(b).repair || 1, missing = info(b).hp - b.hp;
+    const fraction = Math.min(dt * 28, game.gold / cost, missing);
+    game.gold = Math.max(0, game.gold - fraction * cost); b.hp = Math.min(info(b).hp, b.hp + fraction);
+    if (fraction >= missing - 1e-6 || game.gold < .001) { stopPlayer(game); notify(game, fraction >= missing - 1e-6 ? '修理完成' : '金币不足，修理暂停'); }
   }
 }
 // 手动试验单位只执行外侧入口→攻墙→通过入口的固定指令，不搜索或决策。
@@ -266,6 +266,13 @@ export function advance(game, dt) {
   if (game.test) { game.test.moving = false; assaultTick(game, dt); }
   for (const b of game.buildings) {
     b.pulse = Math.max(0, b.pulse - dt);
+    if (b.upgrade) {
+      b.upgrade.progress += dt / UPGRADE_TIME;
+      if (b.upgrade.progress >= 1) {
+        const oldMax = info(b).hp; b.level++; b.hp += info(b).hp - oldMax; b.upgrade = null;
+        fx(game, 'complete', b.x, b.y, { life: 1 }); notify(game, '升级完成：' + info(b).name);
+      }
+    }
     if (b.type !== 'tower' || b.hp <= 0 || b.progress < 1 || !game.test || game.test.hp <= 0) continue;
     b.fire -= dt;
     if (dist(b, game.test) <= 270 && b.fire <= 0) {
@@ -344,8 +351,8 @@ function startBrowser() {
     if (kind in LEVELS || kind === 'blink') {
       mode = mode === kind ? '' : kind; hover = defaults[kind] || { x: game.player.x + 120, y: game.player.y };
       tell(mode ? kind === 'wall' ? '主墙吸附到唯一窄口；点击金色入口开始施工' : kind === 'blink' ? '选择闪烁落点' : '选择空地，精灵会走过去施工' : '已取消放置');
-    } else if (kind === 'upgrade') tell(upgrade(game, selected) || '精灵将前往升级建筑');
-    else if (kind === 'repair') tell(repair(game, selected) || '精灵将靠近并持续工作；移动或停止可中断');
+    } else if (kind === 'upgrade') tell(upgrade(game, selected) || '已开工：建筑自行升级，精灵不必到场');
+    else if (kind === 'repair') tell(repair(game, selected) || '精灵将走到墙边持续修理；移动或停止可中断');
     else if (kind === 'stop') { stopPlayer(game); tell('精灵已停止当前工作'); }
     else if (kind === 'select') { select(game.player); center(game.player); }
     else mode = '';
@@ -418,12 +425,13 @@ function startBrowser() {
       const next = b && LEVELS[b.type][b.level + 1];
       price = next ? next.gold + ' 金 / ' + next.wood + ' 木' : '已满级';
       disabled = !next || b.progress < 1 || !!b.upgrade || game.gold < next.gold || game.wood < next.wood;
-      hint = '精灵靠近施工 5 秒；升级期间墙保持阻挡。';
+      hint = '点一下自动升级 ' + UPGRADE_TIME + ' 秒，精灵不必到场；升级期间墙照常阻挡。';
     } else if (kind === 'repair') {
-      title = b?.progress < 1 ? '继续施工' : b?.upgrade ? '继续升级' : '修理建筑';
-      price = b?.progress < 1 || b?.upgrade ? '需精灵靠近' : '28 生命 / 秒 · 1 金 / 秒';
-      disabled = !b || (b.progress === 1 && !b.upgrade && b.hp >= info(b).hp - .01);
-      hint = '派精灵走到建筑旁持续修理。移动、停止或金币用尽会中断。';
+      const unfinished = b && b.progress < 1;
+      title = unfinished ? '继续施工' : b?.type === 'wall' ? '精灵修墙' : '无需修理';
+      price = unfinished ? '需精灵靠近' : b?.type === 'wall' ? '28 生命 / 秒 · ' + (info(b).repair || 1) + ' 金 / 生命' : '只有墙要动手';
+      disabled = !b || (!unfinished && (b.type !== 'wall' || b.hp >= info(b).hp - .01));
+      hint = '只有修墙要精灵动手：精灵走到墙边持续修理，移动、停止或金币用尽会中断。';
     } else if (kind === 'blink') { price = game.player.blink > 0 ? Math.ceil(game.player.blink) + ' 秒冷却' : '短距位移 · Q'; disabled = game.player.blink > 0; hint = '可越过墙，落点必须是能站立的地面。'; }
     else if (kind === 'stop') { price = '中断当前指令'; hint = '停止行走、施工或修理。未完成建筑可以继续施工。'; }
     else if (kind === 'select') price = 'F1 / 空格定位';
@@ -442,7 +450,7 @@ function startBrowser() {
     $('selected-health').textContent = Math.ceil(selected.hp) + ' / ' + max;
     $('health-fill').style.width = clamp(selected.hp / max * 100, 0, 100) + '%';
     $('health-fill').classList.toggle('danger', selected.hp / max < .35);
-    const actionNames = { build: '施工', repair: '修理', upgrade: '升级' }, job = game.player.order;
+    const actionNames = { build: '施工', repair: '修墙' }, job = game.player.order;
     $('order-status').textContent = job ? (game.player.moving ? '前往' : '正在') + actionNames[job.kind] : game.player.moving ? '正在沿道路移动' : '等待指令';
     const progress = b?.upgrade ? b.upgrade.progress : b?.progress < 1 ? b.progress : null;
     $('work-progress').hidden = progress === null; $('work-fill').style.width = (progress || 0) * 100 + '%';

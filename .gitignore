@@ -1,0 +1,21 @@
+.DS_Store
+
+# Python 虚拟环境
+.venv/
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
+
+# 编辑器本地历史
+.history/
+
+# Warcraft III 地图原始数据（第三方地图作者的成果 + 暴雪 MPQ 格式数据，不做再分发）
+# 本地保留用于分析：work/map-research/extract.py
+*.w3x
+*.mpq
+work/map-research/extracted/
+work/map-research/previews/
+work/map-research/objects.json
