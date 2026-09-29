@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101b22">
+  <title>雪林营地 · 交互试玩</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="game">
+  <header class="topbar">
+    <div class="brand"><span class="crest">❖</span><strong>雪林营地</strong><small>交互试玩</small></div>
+    <div class="resources"><span class="gold-icon">●</span><b id="gold">120</b><small>金币</small><span class="wood-icon">◆</span><b id="wood">12</b><small>木材</small><span class="income"><b id="income">+0</b> / 秒</span></div>
+    <span class="clock" id="clock">00:00</span>
+    <nav class="tools" aria-label="场景控制"><button id="pause">暂停</button><button id="sound">声音 关</button><button id="reset">重置</button></nav>
+  </header>
+  <section class="battlefield" aria-label="雪林营地">
+    <canvas id="field" aria-label="可移动、建造和持续修理的营地地图"></canvas>
+    <div class="scene-caption"><span>FROSTWOOD CAMP</span><b>林间营地</b><small id="status">入口畅通</small></div>
+    <aside class="trial"><span id="test-status">无 AI · 手动试炼</span><div><button id="assault">巨魔攻墙</button><button id="stop-test" aria-label="停止攻墙测试">停止试炼</button></div></aside>
+    <div class="notice" id="notice" role="status" aria-live="polite"></div>
+    <div class="modebar" id="modebar" hidden><span id="mode-text"></span><button id="cancel-placement">取消 ×</button></div>
+    <div class="map-hint">拖动查看 · 滚轮缩放 · 空格定位精灵</div>
+  </section>
+  <footer class="hud">
+    <div class="minimap-wrap"><span class="panel-label">营地视野</span><canvas id="minimap" width="224" height="128" aria-label="点击定位的小地图"></canvas></div>
+    <button class="portrait" id="portrait" title="选中并定位精灵（F1）" aria-label="选择精灵"><canvas id="portrait-canvas" width="116" height="116"></canvas><small>F1 · 精灵</small></button>
+    <section class="selection" aria-label="选中单位信息">
+      <div class="unit-heading"><b id="selected-name">精灵工匠</b><span id="order-status">等待指令</span></div>
+      <div class="health"><i id="health-fill"></i><span id="selected-health">80 / 80</span></div>
+      <div class="work-progress" id="work-progress" hidden><i id="work-fill"></i></div>
+      <p id="selected-detail">移动 / 建造 / 施工 / 持续修理 / 闪烁</p>
+      <small id="command-tip">先造小屋，再在金色窄口建墙；选墙后按 R 修理。</small>
+    </section>
+    <div class="commands" id="commands" aria-label="单位命令"></div>
+  </footer>
+  <div class="modal" id="start-modal"><div class="dialog">
+    <span class="eyebrow">SNOW · STONE · SHELTER</span><h1>一处营地，一道防线</h1>
+    <p>操控精灵，在雪林空地建起家园。到窄口筑墙，在墙后建塔，靠近受损建筑持续修理。</p>
+    <div class="intro-steps"><span><b>01</b> 点空地移动</span><span><b>02</b> 选位置施工</span><span><b>03</b> 手动试炼防线</span></div>
+    <p class="subtle">本场景没有 AI 队友和自动追猎。准备好后，点击“巨魔攻墙”检验你的入口。</p>
+    <button id="start" class="primary" disabled>正在载入雪林…</button><small id="load-status">手机横屏；电脑支持鼠标、快捷键与滚轮。</small>
+  </div></div>
+  <div class="rotate">请横屏进入雪林营地。<small>让战场和建造命令同时可见。</small></div>
+</main>
+<script type="module" src="game.mjs"></script>
+</body>
+</html>
