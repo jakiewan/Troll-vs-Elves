@@ -19,3 +19,11 @@ __pycache__/
 work/map-research/extracted/
 work/map-research/previews/
 work/map-research/objects.json
+work/map-research/object-summary.txt
+
+# 生成物大图只放本地，不进仓库（保留 md/svg 文档）
+outputs/*.png
+work/map-research/previews/*.png
+
+# 本地参考素材
+work/references/
