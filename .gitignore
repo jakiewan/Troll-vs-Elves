@@ -12,18 +12,11 @@ __pycache__/
 # 编辑器本地历史
 .history/
 
-# Warcraft III 地图原始数据（第三方地图作者的成果 + 暴雪 MPQ 格式数据，不做再分发）
-# 本地保留用于分析：work/map-research/extract.py
+# Warcraft III 相关与生成物只放本地，不进仓库
+# work/ 为本地 war3 地图分析区（含第三方地图数据，不做再分发）
+work/
 *.w3x
 *.mpq
-work/map-research/extracted/
-work/map-research/previews/
-work/map-research/objects.json
-work/map-research/object-summary.txt
 
-# 生成物大图只放本地，不进仓库（保留 md/svg 文档）
-outputs/*.png
-work/map-research/previews/*.png
-
-# 本地参考素材
-work/references/
+# outputs/ 为本地生成物（md 文档与图片），不进仓库
+outputs/
