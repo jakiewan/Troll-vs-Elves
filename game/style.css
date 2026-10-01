@@ -14,3 +14,11 @@
 @media(max-height:520px) and (orientation:landscape){.hud{grid-template-columns:100px minmax(150px,1fr) minmax(320px,45%);overflow:hidden}.hud .selection,.hud .commands{min-width:0}}
 
 #troll-combat{display:block;margin-top:5px;color:#e7bf8c;font-variant-numeric:tabular-nums}
+
+/* 升级不可用时仍显示具体费用、科技与缺少资源。 */
+.selection{gap:6px;overflow-y:auto}
+#upgrade-requirements{font-size:11px;line-height:1.5;color:#e5ce9b;white-space:pre-line;flex-shrink:0;min-height:0}
+#upgrade-requirements:not([hidden])+#command-tip{display:none}
+.library-card small{white-space:pre-line}
+.library-card:disabled{opacity:.75;cursor:not-allowed;border-color:#7c6551}
+@media(max-height:520px) and (orientation:landscape){#upgrade-requirements{font-size:9px;line-height:1.35}.selection{gap:3px}}

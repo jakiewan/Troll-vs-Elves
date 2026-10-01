@@ -5,6 +5,8 @@ if(typeof document!=='undefined')startBrowser();
 
 function startBrowser() {
   const $ = id => document.getElementById(id);
+  const upgradeRequirements=$('upgrade-requirements')||Object.assign(document.createElement('small'),{id:'upgrade-requirements'});
+  if(!upgradeRequirements.isConnected)$('command-tip').before(upgradeRequirements);
   const canvas = $('field'), ctx = canvas.getContext('2d'), mini = $('minimap'), miniCtx = mini.getContext('2d');
   const portrait = $('portrait-canvas'), portraitCtx = portrait.getContext('2d');
   const background = new Image(), atlas = new Image(), actors = new Image(), walls = new Image(), elfWork = new Image(), trollAttack = new Image();
@@ -66,6 +68,22 @@ function startBrowser() {
   }
   function availableUpgrades(b) { return b?.type?upgradeOptions(b).filter(d=>game.practice||(!requirement(game,d)&&game.gold>=d.gold&&game.wood>=d.wood)):[]; }
   function availableAddons(b) { return towerAddonOptions(game,b).filter(d=>game.practice||(game.gold>=d.gold&&game.wood>=d.wood)); }
+  function upgradeConditions(d) {
+    const names=d.requires.map(id=>INDEX[id]?LEVELS[INDEX[id].type][INDEX[id].level].name:id);
+    const tech='前置：'+(names.join('、')||'无');
+    if(game.practice)return tech+' · 练习场免前置与费用';
+    const missing=[requirement(game,d)];
+    if(game.gold<d.gold)missing.push('缺 '+Math.ceil(d.gold-game.gold).toLocaleString()+' 金');
+    if(game.wood<d.wood)missing.push('缺 '+Math.ceil(d.wood-game.wood).toLocaleString()+' 木');
+    return tech+'\n'+(missing.filter(Boolean).join('；')||'条件已满足，可以升级');
+  }
+  function upgradeDetails(b) {
+    if(!b)return '';
+    if(b.progress<1)return '建筑建成后才能升级';
+    if(b.upgrade)return '正在升级至：'+LEVELS[b.type][b.upgrade.target].name;
+    const options=upgradeOptions(b);
+    return options.length?options.map(d=>'下一阶：'+d.name+' · '+d.gold.toLocaleString()+' 金 / '+d.wood.toLocaleString()+' 木\n'+upgradeConditions(d)).join('\n'):'主建筑已满级';
+  }
   function toWorld(e) { const r = canvas.getBoundingClientRect(); return { x: camera.x + (e.clientX - r.left) / zoom, y: camera.y + (e.clientY - r.top) / zoom }; }
   function hit(p) {
     const objects = [...game.buildings.filter(b => b.hp > 0), game.player, ...(trollVisible(game) ? [game.test] : [])].sort((a, b) => b.y - a.y);
@@ -166,7 +184,7 @@ function startBrowser() {
     panelMode=which;$('library').hidden=false;const body=$('library-body');body.replaceChildren();
     $('library-title').textContent=({catalog:'建筑与固定基座',upgrade:'选择升级目标',skills:'精灵技能书',economy:'经济与辅助单位',shop:'巨魔商店 · 独立背包'})[which];
     const paragraph=text=>{const p=document.createElement('p');p.className='library-note';p.textContent=text;body.append(p);};
-    const card=(title,detail,action,tag='',art='')=>{const button=document.createElement('button');button.className='library-card';const words=document.createElement('span');words.className='library-words';const name=document.createElement('b'),description=document.createElement('span');name.textContent=title;description.textContent=detail;words.append(name,description);if(tag){const small=document.createElement('small');small.textContent=tag;words.append(small);}if(art){const icon=document.createElement('span');icon.className='library-art command-art art-'+art;if(art.startsWith('icon:')){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'),use=document.createElementNS('http://www.w3.org/2000/svg','use');svg.setAttribute('viewBox','0 0 64 64');use.setAttribute('href','assets/ui-icons.svg#'+art.slice(5));svg.append(use);icon.append(svg);}button.append(icon);}button.append(words);button.addEventListener('click',action);body.append(button);};
+    const card=(title,detail,action,tag='',art='')=>{const button=document.createElement('button');button.className='library-card';const words=document.createElement('span');words.className='library-words';const name=document.createElement('b'),description=document.createElement('span');name.textContent=title;description.textContent=detail;words.append(name,description);if(tag){const small=document.createElement('small');small.textContent=tag;words.append(small);}if(art){const icon=document.createElement('span');icon.className='library-art command-art art-'+art;if(art.startsWith('icon:')){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'),use=document.createElementNS('http://www.w3.org/2000/svg','use');svg.setAttribute('viewBox','0 0 64 64');use.setAttribute('href','assets/ui-icons.svg#'+art.slice(5));svg.append(use);icon.append(svg);}button.append(icon);}button.append(words);button.addEventListener('click',action);body.append(button);return button;};
     const price=d=>d.gold.toLocaleString()+' 金 / '+d.wood.toLocaleString()+' 木';
     const perform=fn=>{if(!canAct())return;const error=fn();tell(error||'操作成功');hud();if(which==='upgrade'&&!error){$('library').hidden=true;panelMode='';}else openPanel(which);};
     if(which==='catalog'){
@@ -182,9 +200,9 @@ function startBrowser() {
         const tabs=document.createElement('div');tabs.className='library-tabs';['主塔逐阶升级','塔旁附塔'].forEach((name,i)=>{const button=document.createElement('button');button.textContent=name;button.className=i===towerTab?'active':'';button.addEventListener('click',()=>{towerTab=i;openPanel('upgrade');});tabs.append(button);});body.append(tabs);
         if(towerTab===1){if(selected.addon)paragraph('已建附塔：'+TOWER_ADDONS.find(d=>d.id===selected.addon.id).name);const addons=availableAddons(selected);if(!addons.length&&!selected.addon)paragraph('当前没有满足资源条件的附塔。');for(const d of addons)card(d.name,(game.practice?'练习免费':price(d))+' · '+(d.heal?'治疗 '+d.heal:d.damage?'额外攻击 '+d.damage:'侦测隐身'),()=>perform(()=>attachTowerAddon(game,selected,d.id)),'原图 Build-On Buddy 附塔','icon:'+(d.heal?'heal':d.effect==='sight'?'sight':'arrow'));return;}
       }
-      const options=availableUpgrades(selected),hasNext=upgradeOptions(selected).length>0;
-      if(!options.length)paragraph(hasNext?'当前资源或科技前置不足，满足后可直接升级。':'没有后续升级。');
-      for(const d of options)card(d.name,(game.practice?'练习免费':price(d))+' · 生命 '+d.hp+' / 护甲 '+d.armor+(d.income?' · 产木 '+d.income.toFixed(3)+' 木/秒（+'+(d.income-info(selected).income).toFixed(3)+'）':'')+(d.effect?' · '+effectNames[d.effect]:''),()=>perform(()=>upgrade(game,selected,d.id)),game.practice?'点击直接升级':requirement(game,d)||'点击直接升级',selected.type==='tower'?'icon:'+(d.effect==='life'?'life':d.effect):selected.type);
+      const options=upgradeOptions(selected),ready=new Set(availableUpgrades(selected).map(d=>d.id));
+      if(!options.length)paragraph('没有后续升级。');
+      for(const d of options){const unit=selected.type==='grove'?'木':'金',button=card(d.name,(game.practice?'练习免费':price(d))+' · 生命 '+d.hp+' / 护甲 '+d.armor+(d.income?' · 产'+unit+' '+d.income.toFixed(3)+' '+unit+'/秒（+'+(d.income-info(selected).income).toFixed(3)+'）':'')+(d.effect?' · '+effectNames[d.effect]:''),()=>perform(()=>upgrade(game,selected,d.id)),upgradeConditions(d),selected.type==='tower'?'icon:'+(d.effect==='life'?'life':d.effect):selected.type);button.disabled=!ready.has(d.id)||selected.progress<1;}
     }else if(which==='skills'){
       paragraph('魔法 '+Math.floor(game.player.mana??200)+'/200，恢复 3/秒。护盾保护墙；缠绕控制巨魔；沉默只封锁主动技能。');
       card('闪烁 Q','冷却 19 秒 · 0 魔法',()=>{command('blink');$('library').hidden=true;},'','icon:blink');
@@ -228,9 +246,11 @@ function startBrowser() {
       disabled = (!game.practice && game.gold < d.gold) || (kind !== 'tower' && game.buildings.some(v => v.type === kind && v.hp > 0));
     } else if (kind === 'upgrade') {
       const next=b&&availableUpgrades(b),addon=b&&availableAddons(b);
-      price=next?.length+addon?.length===1?(game.practice?'立即升级':'升级 '+(next.length?next[0].name:addon[0].name)):(next?.length||addon?.length?'选择升级':'已满级或条件不足');
+      const target=b&&upgradeOptions(b)[0];
+      price=next?.length+addon?.length===1?(game.practice?'立即升级':'升级 '+(next.length?next[0].name:addon[0].name)):(next?.length||addon?.length?'选择升级':target?(requirement(game,target)||'升级资源不足'):'主建筑已满级');
+      if(b?.progress<1)price='建成后可升级';else if(b?.upgrade)price='正在升级';
       disabled=(!next?.length&&!addon?.length)||!b||b.progress<1||!!b.upgrade;
-      hint = '只有一个可选升级时点击即可开始；升级期间建筑仍正常工作。';
+      hint = upgradeDetails(b);
     } else if (kind === 'repair') {
       const unfinished = b && b.progress < 1;
       title = unfinished ? '继续施工' : b?.type === 'wall' ? '精灵修墙' : '无需修理';
@@ -258,6 +278,8 @@ function startBrowser() {
     $('status').textContent = wall ? '窄口已封锁' : '入口畅通'; $('status').classList.toggle('sealed', !!wall);
     $('test-status').textContent = !game.test ? game.auto?'准备阶段 · '+Math.max(0,Math.ceil(30-game.time))+' 秒后入场':'手动试炼' : game.test.invisible>0&&!trollVisible(game)?'巨魔隐身中 · 侦察守卫可揭示':({ shop:'巨魔正在出生点补给',retreat:'巨魔正在回商店',approach: '巨魔正在沿路接近', attack: '巨魔被挡在墙外', breach: '入口已打开，巨魔正进入', done: '巨魔已通过入口', defeated: '防御成功：巨魔倒下' })[game.test.stage];
     const b = selected?.type ? selected : null, max = b ? info(b).hp : selected.maxHp;
+    upgradeRequirements.hidden=!b;
+    upgradeRequirements.textContent=upgradeDetails(b);
     $('selected-name').textContent = b ? info(b).name + ' · ' + (b.level + 1) + ' 阶' : selected.id === 'troll' ? '攻墙试炼 · 巨魔' : '精灵工匠';
     $('selected-health').textContent = Math.ceil(selected.hp) + ' / ' + max;
     $('health-fill').style.width = clamp(selected.hp / max * 100, 0, 100) + '%';

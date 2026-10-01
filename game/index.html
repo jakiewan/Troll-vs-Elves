@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101b22">
   <title>雪林防线 · 单机守卫战</title>
-  <link rel="stylesheet" href="style.css?v=20261001a">
+  <link rel="stylesheet" href="style.css?v=20261001b">
 </head>
 <body>
 <main class="game">
@@ -34,6 +34,7 @@
       <div class="health"><i id="health-fill"></i><span id="selected-health">1 / 1</span></div>
       <div class="work-progress" id="work-progress" hidden><i id="work-fill"></i></div>
       <p id="selected-detail">移动 / 建造 / 施工 / 持续修理 / 闪烁</p>
+      <small id="upgrade-requirements" hidden></small>
       <small id="command-tip">先造小屋，再在金色窄口建墙；选墙后按 R 修理。</small>
     </section>
     <div class="commands" id="commands" aria-label="单位命令"></div>
@@ -48,6 +49,6 @@
   <div class="modal" id="result-modal" hidden><div class="dialog"><span class="eyebrow">FROSTWOOD · BATTLE REPORT</span><h1 id="result-title"></h1><p id="result-detail"></p><button class="primary" id="replay">再来一局</button><button class="primary secondary" id="back-menu">返回开局</button></div></div>
   <div class="rotate">请横屏进入雪林营地。<small>让战场和建造命令同时可见。</small></div>
 </main>
-<script type="module" src="game.mjs?v=20261001a"></script>
+<script type="module" src="game.mjs?v=20261001b"></script>
 </body>
 </html>
