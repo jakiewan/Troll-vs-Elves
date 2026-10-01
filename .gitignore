@@ -20,3 +20,8 @@ work/
 
 # outputs/ 为本地生成物（md 文档与图片），不进仓库
 outputs/
+
+# 本地工具与体验记录
+.omo/
+QA_TEST_LOG.md
+game/preview-*.png
