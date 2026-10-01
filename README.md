@@ -8,6 +8,8 @@
 
 仓库：[jakiewan/Troll-vs-Elves](https://github.com/jakiewan/Troll-vs-Elves)
 
+**公网试玩：[点击进入雪林防线](https://jakiewan.github.io/Troll-vs-Elves/)**。电脑可直接打开，手机请横屏。后续推送到 `master` 的游戏变更会通过 GitHub Actions 自动部署。
+
 ## 1. 下载并启动
 
 需要 **Python 3** 和现代浏览器。游戏使用 HTML、CSS、JavaScript 与 Canvas，启动时不需要安装 npm 依赖、数据库或后端服务。Node.js 仅用于运行模拟测试。
